@@ -1,12 +1,21 @@
 package spark.snm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+
+import spark.snm.comparator.Sort;
 
 public class SNM {
 
 	public static void main(String[] args) {
-
+		SparkConf conf = new SparkConf();
+		conf.setMaster("local");
+		conf.setAppName("map");
+		JavaSparkContext sc = new JavaSparkContext(conf);
 		List<DataRow> dataRows = new ArrayList<DataRow>();
 		DataRow row1 = new DataRow();
 		row1.setEmail("1@163.com");
@@ -47,39 +56,61 @@ public class SNM {
 		row5.setPhone("13880438575");
 		row5.setTaobaoId("taobao124@taobao.com");
 		row5.setId(5);
+
+		DataRow row6 = new DataRow();
+		row6.setEmail("3@163.com");
+		row6.setIdCard("441522108209080134");
+		row6.setImei("");
+		row6.setPhone("13880438575");
+		row6.setTaobaoId("taobao124@taobao.com");
+		row6.setId(6);
 		/////////////////////////////////////////////////////
 		dataRows.add(row1);
 		dataRows.add(row2);
 		dataRows.add(row3);
 		dataRows.add(row4);
 		dataRows.add(row5);
+		dataRows.add(row6);
+		int sortTime2 = 2;
+		for (int index = 0; index < sortTime2; index++) {
+			if (index == 0) {
+				Collections.sort(dataRows, new Sort(Sort.DEFAULT_KEY));
+			} else {
+				Collections.sort(dataRows, new Sort(Sort.IDCARD_KEY));
+			}
+			for (DataRow dataRow : dataRows) {
+				System.out.println(dataRow.getId());
+			}
+			merge(dataRows);
+		}
 
+	}
+
+	private static void merge(List<DataRow> dataRows) {
 		int totalCount = dataRows.size();
+		// 记录最后索引位
 		int last = totalCount - 1;
+		// 窗口大小
 		int windowsSize = 2;
 		int windowTop = 0;
 		int windowBottom = windowTop + windowsSize - 1;
-		int pointer = windowBottom;
 		while (windowBottom <= last) {
-			DataRow pointerDataRow = dataRows.get(pointer);
+			DataRow bottomDataRow = dataRows.get(windowBottom);
 			for (int index = windowTop; index < windowBottom; index++) {
 				DataRow windowDataRow = dataRows.get(index);
-				if (isSimilary(pointerDataRow, windowDataRow)) {
+				if (isSimilary(bottomDataRow, windowDataRow)) {
 					System.out.println(
-							"dataRowId:" + pointerDataRow.getId() + "," + windowDataRow.getId() + " is similary");
+							"dataRowId:" + bottomDataRow.getId() + "," + windowDataRow.getId() + " is similary");
 				}
 
 			}
 			windowTop++;
 			windowBottom++;
-			pointer++;
-
 		}
 	}
 
 	static Boolean isSimilary(DataRow row1, DataRow row2) {
-		if (row1.getImei().equalsIgnoreCase(row2.getImei()) && row1.getPhone().equalsIgnoreCase(row2.getPhone())
-				&& row1.getTaobaoId().equalsIgnoreCase(row2.getTaobaoId())) {
+		if (rule1(row1, row2) || rule2(row1, row2)) {
 			return true;
 		} else {
 			return false;
@@ -87,4 +118,41 @@ public class SNM {
 
 	}
 
+	/**
+	 * 规则1
+	 * 
+	 * @param row1
+	 * @param row2
+	 * @return
+	 */
+	static Boolean rule1(DataRow row1, DataRow row2) {
+		if ((row1.getImei().equalsIgnoreCase(row2.getImei()) && row1.getPhone().equalsIgnoreCase(row2.getPhone())
+				&& row1.getTaobaoId().equalsIgnoreCase(row2.getTaobaoId()))) {
+			return true;
+		} else
+
+		{
+			return false;
+		}
+
+	}
+
+	/**
+	 * 规则2
+	 * 
+	 * @param row1
+	 * @param row2
+	 * @return
+	 */
+	static Boolean rule2(DataRow row1, DataRow row2) {
+		if ((row1.getIdCard().equalsIgnoreCase(row2.getIdCard())) && !row1.getIdCard().isEmpty()
+				&& !row2.getIdCard().isEmpty()) {
+			return true;
+		} else
+
+		{
+			return false;
+		}
+
+	}
 }
